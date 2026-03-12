@@ -1,18 +1,26 @@
+import { createContext, useContext } from 'react';
 
-export const T = {
-  bg: '#0a0a0a',
-  card: '#111111',
-  border: '#1e1e1e',
-  neon: '#39ff14',
-  neonDim: '#0d2200',
-  cyan: '#00e5ff',
-  purple: '#bf5af2',
-  red: '#ff2d78',
-  yellow: '#ffd60a',
-  text: '#e8e8e8',
-  muted: '#555555',
-  mid: '#888888',
+export const THEMES = {
+  dark: {
+    bg: '#0a0a0a', card: '#111111', border: '#1e1e1e', primary: '#39ff14', primaryDim: '#39ff1422',
+    text: '#e8e8e8', muted: '#555555', mid: '#888888', inputBg: '#1a1a1a',
+    danger: '#ff2d78', yellow: '#ffd60a', cyan: '#00e5ff', purple: '#bf5af2',
+    name: 'dark', shadow: '0 0 18px #39ff1433', overlay: 'rgba(0,0,0,0.85)'
+  },
+  light: {
+    bg: '#f5f5f0', card: '#ffffff', border: '#e0e0e0', primary: '#1a7a05', primaryDim: '#1a7a0522',
+    text: '#1a1a1a', muted: '#aaaaaa', mid: '#666666', inputBg: '#f0f0ec',
+    danger: '#e8003d', yellow: '#c47a00', cyan: '#0077aa', purple: '#7b2fa8',
+    name: 'light', shadow: '0 2px 12px rgba(0,0,0,0.08)', overlay: 'rgba(0,0,0,0.5)'
+  }
 };
+
+export const ThemeContext = createContext(THEMES.dark);
+
+export function useTheme() {
+  const T = useContext(ThemeContext);
+  return { T, css: getCss(T) };
+}
 
 export const CATEGORIES = [
   { id: 'food',          label: 'Food',          color: '#f4a261', emoji: '🍱' },
@@ -63,70 +71,71 @@ export const DEFAULT_DATA = {
   antigravity: false,
 };
 
-// Shared inline styles helpers
-export const css = {
-  orbitron: { fontFamily: "'Orbitron', monospace" },
-  rajdhani: { fontFamily: "'Rajdhani', sans-serif" },
-  neonCard: {
-    background: '#111',
-    border: '1px solid #39ff14',
-    borderRadius: 12,
-    boxShadow: '0 0 18px #39ff1433',
-    padding: 16,
-  },
-  darkCard: {
-    background: '#111',
-    border: '1px solid #1e1e1e',
-    borderRadius: 12,
-    padding: 16,
-  },
-  neonBtn: {
-    background: '#39ff14',
-    color: '#000',
-    border: 'none',
-    borderRadius: 8,
-    padding: '10px 20px',
-    fontFamily: "'Orbitron', monospace",
-    fontWeight: 700,
-    fontSize: 12,
-    cursor: 'pointer',
-    letterSpacing: 1,
-    transition: 'opacity 0.2s',
-  },
-  ghostBtn: {
-    background: 'transparent',
-    color: '#39ff14',
-    border: '1px solid #39ff14',
-    borderRadius: 8,
-    padding: '10px 20px',
-    fontFamily: "'Orbitron', monospace",
-    fontWeight: 700,
-    fontSize: 12,
-    cursor: 'pointer',
-    letterSpacing: 1,
-    transition: 'opacity 0.2s',
-  },
-  sectionLabel: {
-    fontFamily: "'Orbitron', monospace",
-    fontSize: 10,
-    color: '#39ff14',
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-    display: 'block',
-  },
-  input: {
-    background: '#1a1a1a',
-    border: '1px solid #2a2a2a',
-    borderRadius: 8,
-    color: '#e8e8e8',
-    padding: '12px 14px',
-    fontSize: 16,
-    width: '100%',
-    fontFamily: "'Rajdhani', sans-serif",
-    outline: 'none',
-  },
-};
+export function getCss(T) {
+  return {
+    orbitron: { fontFamily: "'Orbitron', monospace" },
+    rajdhani: { fontFamily: "'Rajdhani', sans-serif" },
+    neonCard: {
+      background: T.card,
+      border: `2px solid ${T.primary}`,
+      borderRadius: 12,
+      boxShadow: T.shadow,
+      padding: 16,
+    },
+    darkCard: {
+      background: T.card,
+      border: `1px solid ${T.border}`,
+      borderRadius: 12,
+      padding: 16,
+    },
+    neonBtn: {
+      background: T.primary,
+      color: T.name === 'dark' ? '#000' : '#fff',
+      border: 'none',
+      borderRadius: 8,
+      padding: '10px 20px',
+      fontFamily: "'Orbitron', monospace",
+      fontWeight: 700,
+      fontSize: 12,
+      cursor: 'pointer',
+      letterSpacing: 1,
+      transition: 'opacity 0.2s, background-color 0.2s',
+    },
+    ghostBtn: {
+      background: 'transparent',
+      color: T.primary,
+      border: `1px solid ${T.primary}`,
+      borderRadius: 8,
+      padding: '10px 20px',
+      fontFamily: "'Orbitron', monospace",
+      fontWeight: 700,
+      fontSize: 12,
+      cursor: 'pointer',
+      letterSpacing: 1,
+      transition: 'opacity 0.2s, color 0.2s, border-color 0.2s',
+    },
+    sectionLabel: {
+      fontFamily: "'Orbitron', monospace",
+      fontSize: 10,
+      color: T.primary,
+      letterSpacing: 2,
+      textTransform: 'uppercase',
+      marginBottom: 8,
+      display: 'block',
+    },
+    input: {
+      background: T.inputBg,
+      border: `1px solid ${T.border}`,
+      borderRadius: 8,
+      color: T.text,
+      padding: '12px 14px',
+      fontSize: 16,
+      width: '100%',
+      fontFamily: "'Rajdhani', sans-serif",
+      outline: 'none',
+    },
+  };
+}
 
 export function today() {
   return new Date().toISOString().slice(0, 10);

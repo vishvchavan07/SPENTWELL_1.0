@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import { css, T, CATEGORIES, getCatById, formatDate, uid, updateStreak, checkBadges } from './theme';
+import { CATEGORIES, getCatById, formatDate, uid, updateStreak, checkBadges, useTheme } from './theme';
 
 function AddModal({ onClose, onAdd }) {
+  const { T, css } = useTheme();
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('food');
   const [note, setNote] = useState('');
@@ -36,7 +37,7 @@ function AddModal({ onClose, onAdd }) {
             placeholder="₹ Amount"
             value={amount}
             onChange={e => setAmount(e.target.value)}
-            style={{ ...css.input, fontSize: 28, fontFamily: "'Orbitron', monospace", textAlign: 'center', color: T.neon }}
+            style={{ ...css.input, fontSize: 28, fontFamily: "'Orbitron', monospace", textAlign: 'center', color: T.primary }}
           />
         </div>
 
@@ -101,6 +102,7 @@ function AddModal({ onClose, onAdd }) {
 }
 
 export default function Expenses({ data, setData }) {
+  const { T, css } = useTheme();
   const [showModal, setShowModal] = useState(false);
   const [filterCat, setFilterCat] = useState('all');
 
@@ -140,12 +142,12 @@ export default function Expenses({ data, setData }) {
               key={id}
               onClick={() => setFilterCat(id)}
               style={{
-                background: active ? (cat ? cat.color + '22' : T.neonDim) : '#1a1a1a',
-                border: `1.5px solid ${active ? (cat ? cat.color : T.neon) : '#2a2a2a'}`,
+                background: active ? (cat ? cat.color + '22' : T.primaryDim) : '#1a1a1a',
+                border: `1.5px solid ${active ? (cat ? cat.color : T.primary) : '#2a2a2a'}`,
                 borderRadius: 20,
                 padding: '6px 14px',
                 cursor: 'pointer',
-                color: active ? (cat ? cat.color : T.neon) : T.muted,
+                color: active ? (cat ? cat.color : T.primary) : T.muted,
                 fontFamily: "'Rajdhani', sans-serif",
                 fontWeight: 600,
                 fontSize: 13,
@@ -199,7 +201,7 @@ export default function Expenses({ data, setData }) {
                   transition: 'color 0.2s',
                   flexShrink: 0,
                 }}
-                onMouseEnter={ev => ev.target.style.color = T.red}
+                onMouseEnter={ev => ev.target.style.color = T.danger}
                 onMouseLeave={ev => ev.target.style.color = T.muted}
               >✕</button>
             </div>

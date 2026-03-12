@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { STORAGE_KEY, DEFAULT_DATA, T, css } from './theme';
+import { STORAGE_KEY, DEFAULT_DATA, THEMES, ThemeContext, getCss } from './theme';
 import Onboarding from './Onboarding';
 import Dashboard from './Dashboard';
 import Expenses from './Expenses';
@@ -32,6 +32,20 @@ const TABS = [
 export default function App() {
   const [data, setDataRaw] = useState(loadData);
   const [tab, setTab] = useState('home');
+  const [themeMode, setThemeMode] = useState(() => {
+    try {
+      return window.localStorage.getItem('spentwell_theme') || 'dark';
+    } catch { return 'dark'; }
+  });
+
+  const T = THEMES[themeMode] || THEMES.dark;
+  const css = getCss(T);
+
+  const toggleTheme = () => {
+    const next = themeMode === 'dark' ? 'light' : 'dark';
+    setThemeMode(next);
+    try { window.localStorage.setItem('spentwell_theme', next); } catch { /* ignore */ }
+  };
 
   const setData = useCallback((updater) => {
     setDataRaw(prev => {
@@ -71,7 +85,8 @@ export default function App() {
   };
 
   return (
-    <div style={appStyle}>
+    <ThemeContext.Provider value={T}>
+      <div style={appStyle}>
       {/* Top Bar — hidden on Map */}
       {tab !== 'map' && (
         <div style={{
@@ -82,20 +97,28 @@ export default function App() {
           width: '100%',
           maxWidth: 480,
           zIndex: 40,
-          background: '#0a0a0aee',
+          background: T.name === 'dark' ? '#0a0a0aee' : '#ffffffee',
           backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid #1e1e1e',
+          borderBottom: `1px solid ${T.border}`,
           padding: '10px 16px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
-          <div style={{ ...css.orbitron, fontSize: 15, fontWeight: 900, color: T.neon, textShadow: '0 0 10px #39ff1466', letterSpacing: 2 }}>
+          <div style={{ ...css.orbitron, fontSize: 15, fontWeight: 900, color: T.primary, textShadow: T.name === 'dark' ? `0 0 10px ${T.primary}66` : 'none', letterSpacing: 2 }}>
             SPENTWELL
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 16 }}>🔥</span>
-            <span style={{ ...css.orbitron, fontSize: 14, fontWeight: 700, color: T.yellow }}>{data.streak}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 16 }}>🔥</span>
+              <span style={{ ...css.orbitron, fontSize: 14, fontWeight: 700, color: T.yellow }}>{data.streak}</span>
+            </div>
+            <button
+              onClick={toggleTheme}
+              style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', padding: 0 }}
+            >
+              {themeMode === 'light' ? '🌙' : '☀️'}
+            </button>
           </div>
         </div>
       )}
@@ -119,9 +142,9 @@ export default function App() {
         width: '100%',
         maxWidth: 480,
         zIndex: 50,
-        background: '#0f0f0fee',
+        background: T.name === 'dark' ? '#0f0f0fee' : '#ffffffee',
         backdropFilter: 'blur(16px)',
-        borderTop: '1px solid #1e1e1e',
+        borderTop: `1px solid ${T.border}`,
         display: 'flex',
         padding: '4px 0 8px',
       }}>
@@ -153,9 +176,9 @@ export default function App() {
                   left: '20%',
                   right: '20%',
                   height: 2,
-                  background: T.neon,
+                  background: T.primary,
                   borderRadius: 2,
-                  boxShadow: `0 0 8px ${T.neon}`,
+                  boxShadow: T.name === 'dark' ? `0 0 8px ${T.primary}` : 'none',
                 }} />
               )}
               {/* Red dot badge */}
@@ -167,15 +190,15 @@ export default function App() {
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
-                  background: T.red,
-                  boxShadow: `0 0 6px ${T.red}`,
+                  background: T.danger,
+                  boxShadow: T.name === 'dark' ? `0 0 6px ${T.danger}` : 'none',
                 }} />
               )}
               <span style={{ fontSize: 20 }}>{t.icon}</span>
               <span style={{
                 fontSize: 9,
                 ...css.orbitron,
-                color: active ? T.neon : T.muted,
+                color: active ? T.primary : T.muted,
                 letterSpacing: 0.5,
                 transition: 'color 0.2s',
               }}>{t.label}</span>
@@ -183,6 +206,7 @@ export default function App() {
           );
         })}
       </nav>
-    </div>
+      </div>
+    </ThemeContext.Provider>
   );
 }

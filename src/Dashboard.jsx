@@ -4,13 +4,14 @@ import {
   PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import {
-  css, T, CATEGORIES, getCatById, totalSpentThisMonth,
-  daysLeftInMonth, formatDate,
+  CATEGORIES, getCatById, totalSpentThisMonth,
+  daysLeftInMonth, formatDate, useTheme
 } from './theme';
 
 function BudgetBar({ spent, budget }) {
+  const { T, css } = useTheme();
   const pct = Math.min(100, Math.round((spent / budget) * 100));
-  const color = pct < 60 ? T.neon : pct < 85 ? T.yellow : T.red;
+  const color = pct < 60 ? T.primary : pct < 85 ? T.yellow : T.danger;
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -35,14 +36,14 @@ function BudgetBar({ spent, budget }) {
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
         <span style={{ fontSize: 12, color: T.mid, ...css.rajdhani }}>{pct}% used</span>
-        <span style={{ fontSize: 12, color: T.neon, ...css.rajdhani }}>
+        <span style={{ fontSize: 12, color: T.primary, ...css.rajdhani }}>
           Safe/day: ₹{Math.max(0, Math.round((budget - spent) / daysLeftInMonth()))}
         </span>
       </div>
       {pct > 85 && (
         <div style={{
-          marginTop: 10, background: '#2a0010', border: `1px solid ${T.red}`,
-          borderRadius: 8, padding: '8px 12px', color: T.red,
+          marginTop: 10, background: '#2a0010', border: `1px solid ${T.danger}`,
+          borderRadius: 8, padding: '8px 12px', color: T.danger,
           fontSize: 12, ...css.rajdhani, fontWeight: 600,
         }}>
           ⚠️ Budget danger zone! {daysLeftInMonth()} days left
@@ -53,6 +54,7 @@ function BudgetBar({ spent, budget }) {
 }
 
 function RecentActivity({ expenses }) {
+  const { T, css } = useTheme();
   const last5 = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
   if (!last5.length) return null;
   return (
@@ -88,16 +90,18 @@ function RecentActivity({ expenses }) {
 }
 
 const CustomTooltip = ({ active, payload, label }) => {
+  const { T, css } = useTheme();
   if (!active || !payload || !payload.length) return null;
   return (
     <div style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 8, padding: '8px 12px' }}>
       <div style={{ color: T.mid, fontSize: 11, ...css.rajdhani }}>{label}</div>
-      <div style={{ color: T.neon, fontWeight: 700, ...css.orbitron, fontSize: 13 }}>₹{payload[0].value}</div>
+      <div style={{ color: T.primary, fontWeight: 700, ...css.orbitron, fontSize: 13 }}>₹{payload[0].value}</div>
     </div>
   );
 };
 
 export default function Dashboard({ data, onNavigateDues }) {
+  const { T, css } = useTheme();
   const { user, expenses, borrows, streak } = data;
   const spent = useMemo(() => totalSpentThisMonth(expenses), [expenses]);
 
@@ -142,7 +146,7 @@ export default function Dashboard({ data, onNavigateDues }) {
       }}>
         <div>
           <div style={{ color: T.muted, fontSize: 11, ...css.orbitron, letterSpacing: 2 }}>WELCOME BACK</div>
-          <div style={{ ...css.orbitron, fontSize: 22, fontWeight: 900, color: T.neon, marginTop: 2 }}>
+          <div style={{ ...css.orbitron, fontSize: 22, fontWeight: 900, color: T.primary, marginTop: 2 }}>
             {user.name.toUpperCase()}
           </div>
           <div style={{ color: T.mid, fontSize: 13, ...css.rajdhani, marginTop: 2 }}>{user.college}</div>
@@ -167,14 +171,14 @@ export default function Dashboard({ data, onNavigateDues }) {
             style={{ ...css.darkCard, flex: 1, cursor: 'pointer', border: '1px solid #39ff1444', textAlign: 'center' }}
           >
             <div style={{ color: T.muted, fontSize: 10, ...css.orbitron, letterSpacing: 1 }}>RECEIVE KARNA HAI</div>
-            <div style={{ color: T.neon, ...css.orbitron, fontSize: 18, fontWeight: 900, marginTop: 4 }}>₹{toReceive.toLocaleString()}</div>
+            <div style={{ color: T.primary, ...css.orbitron, fontSize: 18, fontWeight: 900, marginTop: 4 }}>₹{toReceive.toLocaleString()}</div>
           </div>
           <div
             onClick={onNavigateDues}
             style={{ ...css.darkCard, flex: 1, cursor: 'pointer', border: '1px solid #ff2d7844', textAlign: 'center' }}
           >
             <div style={{ color: T.muted, fontSize: 10, ...css.orbitron, letterSpacing: 1 }}>DENA HAI</div>
-            <div style={{ color: T.red, ...css.orbitron, fontSize: 18, fontWeight: 900, marginTop: 4 }}>₹{toGive.toLocaleString()}</div>
+            <div style={{ color: T.danger, ...css.orbitron, fontSize: 18, fontWeight: 900, marginTop: 4 }}>₹{toGive.toLocaleString()}</div>
           </div>
         </div>
       )}
@@ -198,9 +202,9 @@ export default function Dashboard({ data, onNavigateDues }) {
             <XAxis dataKey="day" tick={{ fill: T.muted, fontSize: 10, fontFamily: 'Rajdhani' }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: T.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="amount" fill={T.neon} radius={[4, 4, 0, 0]}>
+            <Bar dataKey="amount" fill={T.primary} radius={[4, 4, 0, 0]}>
               {last7.map((_, i) => (
-                <Cell key={i} fill={T.neon} fillOpacity={0.85} />
+                <Cell key={i} fill={T.primary} fillOpacity={0.85} />
               ))}
             </Bar>
           </BarChart>

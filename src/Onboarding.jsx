@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { css, T } from './theme';
+import { useTheme } from './theme';
 
 export default function Onboarding({ onComplete }) {
+  const { T, css } = useTheme();
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [occupation, setOccupation] = useState('Student');
@@ -41,7 +42,7 @@ export default function Onboarding({ onComplete }) {
           ...css.orbitron,
           fontSize: 36,
           fontWeight: 900,
-          color: T.neon,
+          color: T.primary,
           textShadow: '0 0 20px #39ff14, 0 0 40px #39ff1466',
           letterSpacing: 4,
         }}>SPENTWELL</div>
@@ -70,12 +71,12 @@ export default function Onboarding({ onComplete }) {
                   onClick={() => setOccupation(o.label)}
                   style={{
                     flex: 1,
-                    background: occupation === o.label ? T.neonDim : '#1a1a1a',
-                    border: `2px solid ${occupation === o.label ? T.neon : '#2a2a2a'}`,
+                    background: occupation === o.label ? T.primaryDim : '#1a1a1a',
+                    border: `2px solid ${occupation === o.label ? T.primary : '#2a2a2a'}`,
                     borderRadius: 10,
                     padding: '14px 8px',
                     cursor: 'pointer',
-                    color: occupation === o.label ? T.neon : T.mid,
+                    color: occupation === o.label ? T.primary : T.mid,
                     fontFamily: "'Rajdhani', sans-serif",
                     fontWeight: 600,
                     fontSize: 13,
@@ -122,11 +123,11 @@ export default function Onboarding({ onComplete }) {
                   key={c}
                   onClick={() => { setBudget(c); setCustomBudget(''); }}
                   style={{
-                    background: budget === c && !customBudget ? T.neonDim : '#1a1a1a',
-                    border: `1px solid ${budget === c && !customBudget ? T.neon : '#333'}`,
+                    background: budget === c && !customBudget ? T.primaryDim : '#1a1a1a',
+                    border: `1px solid ${budget === c && !customBudget ? T.primary : '#333'}`,
                     borderRadius: 20,
                     padding: '6px 14px',
-                    color: budget === c && !customBudget ? T.neon : T.mid,
+                    color: budget === c && !customBudget ? T.primary : T.mid,
                     cursor: 'pointer',
                     fontFamily: "'Rajdhani', sans-serif",
                     fontWeight: 600,
@@ -165,7 +166,7 @@ export default function Onboarding({ onComplete }) {
             width: s === step ? 24 : 8,
             height: 8,
             borderRadius: 4,
-            background: s === step ? T.neon : T.muted,
+            background: s === step ? T.primary : T.muted,
             transition: 'all 0.3s',
             boxShadow: s === step ? '0 0 8px #39ff14' : 'none',
           }} />

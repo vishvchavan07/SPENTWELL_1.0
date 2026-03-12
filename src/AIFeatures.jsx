@@ -1,50 +1,53 @@
 import { useState } from 'react';
-import { css, T, totalSpentThisMonth, daysLeftInMonth, getCatById, uid, checkBadges } from './theme';
+import { totalSpentThisMonth, daysLeftInMonth, getCatById, uid, checkBadges, useTheme } from './theme';
 
-const API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-20250514';
+let SARVAM_KEY = "";
 
-async function streamClaude(prompt, onChunk) {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+async function askSarvam(systemPrompt, userPrompt, onChunk) {
+  const res = await fetch("https://api.sarvam.ai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "api-subscription-key": SARVAM_KEY
+    },
     body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 1000,
+      model: "sarvam-m",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user",   content: userPrompt   }
+      ],
       stream: true,
-      messages: [{ role: 'user', content: prompt }],
-    }),
+      max_tokens: 500
+    })
   });
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`API Error: ${res.status} - ${err}`);
+    throw new Error(`API Error: ${res.status}`);
   }
 
   const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
+  const dec = new TextDecoder();
+  let full = "";
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const raw = line.slice(6).trim();
-      if (raw === '[DONE]') return;
+    const chunk = dec.decode(value);
+    for (const line of chunk.split("\n")) {
+      if (!line.startsWith("data:")) continue;
+      const raw = line.slice(5).trim();
+      if (raw === "[DONE]") break;
       try {
-        const json = JSON.parse(raw);
-        const delta = json?.delta?.text;
-        if (delta) onChunk(delta);
-      } catch { /* skip */ }
+        const j = JSON.parse(raw);
+        const t = j?.choices?.[0]?.delta?.content || "";
+        if (t) { full += t; onChunk(full); }
+      } catch(_) {}
     }
   }
+  return full;
 }
 
-function tintCard(color, content, label) {
+function tintCard(color, content, label, T, css) {
   return (
     <div style={{
       background: color + '15', border: `1px solid ${color}44`,
@@ -57,6 +60,7 @@ function tintCard(color, content, label) {
 }
 
 export default function AIFeatures({ data, setData }) {
+  const { T, css } = useTheme();
   const { user, expenses, borrows, streak, notifications, earnedBadges } = data;
   const spent = totalSpentThisMonth(expenses);
   const budget = user.budget;
@@ -91,62 +95,87 @@ export default function AIFeatures({ data, setData }) {
   };
 
   const handleDesiNotif = async () => {
+    if (!SARVAM_KEY) {
+      setNotifText("Bhai API key daalo pehle! dashboard.sarvam.ai pe jaao aur free key lo 🙏");
+      return;
+    }
     setNotifLoading(true); setNotifText('');
-    const prompt = `Generate ONE short savage funny Hinglish notification for a college student finance app. Max 2 lines. No quotes. No explanation. Just the notification.\nStudent: ${user.name}, Budget: ₹${budget}, Spent: ₹${spent} (${pct}% used), Overdue dues: ${overdueDues}, Streak: ${streak} days`;
+    const sysPrompt = "Tu ek desi Indian finance assistant hai jo college students ke liye kaam karta hai. Teri language Hinglish hai — Hindi aur English mix. Tu savage, funny, aur relatable hai. Short mein bolta hai.";
+    const userPrompt = `Ek short notification likh — max 2 lines, funny aur savage Hinglish mein. Koi quote nahi, koi explanation nahi. Sirf notification.\nStudent: ${user.name}\nBudget: Rs.${budget}\nSpent: Rs.${spent} (${pct}% use ho gaya)\nOverdue dues: ${overdueDues} friends\nStreak: ${streak} days`;
     try {
       let txt = '';
-      await streamClaude(prompt, chunk => { txt += chunk; setNotifText(txt); });
+      await askSarvam(sysPrompt, userPrompt, chunk => { txt = chunk; setNotifText(txt); });
       saveNotif(txt);
-    } catch (e) { setNotifText('❌ API Error: ' + e.message); }
+    } catch (e) { setNotifText("Sarvam AI se connect nahi hua. Key check karo aur dobara try karo!"); }
     setNotifLoading(false);
   };
 
   const handleRoast = async () => {
-    setRoastModal(true); setRoastLoading(true); setRoastText('');
-    const prompt = `You are a savage but funny desi financial advisor roasting a college student in Hinglish. Roast their monthly spending in 6-8 lines. Be funny, use desi references, college life references. Use emoji. End with 1 genuine tip.\nStudent: ${user.name}, College: ${user.college}, Budget: ₹${budget}, Spent: ₹${spent}, Top categories: ${top3 || 'N/A'}, Pending dues: ${borrows.filter(b => !b.settled).length} friends, Streak: ${streak} days. Write roast directly. No intro.`;
+    setRoastModal(true);
+    if (!SARVAM_KEY) {
+      setRoastText("Teri roast ke liye API key chahiye! Free mein milti hai dashboard.sarvam.ai pe 😄");
+      return;
+    }
+    setRoastLoading(true); setRoastText('');
+    const sysPrompt = "Tu ek savage desi financial roast comedian hai. Tu college students ka kharcha dekh ke unhe funny Hinglish mein roast karta hai. Desi references use kar — canteen, hostel, auto, chai, jugaad. Emoji use kar.";
+    const userPrompt = `Is student ka poora mahine ka kharcha dekh aur 6-8 lines mein roast kar. Funny ho, desi references hon, aur end mein ek genuine money saving tip de.\nStudent: ${user.name}\nCollege: ${user.college}\nBudget: Rs.${budget}\nTotal spent: Rs.${spent}\nTop categories: ${top3 || 'N/A'}\nPending dues: ${borrows.filter(b => !b.settled).length} friends\nStreak: ${streak} days`;
     try {
       let txt = '';
-      await streamClaude(prompt, chunk => { txt += chunk; setRoastText(txt); });
+      await askSarvam(sysPrompt, userPrompt, chunk => { txt = chunk; setRoastText(txt); });
       if (!earnedBadges.includes('roasted')) {
         setData(prev => {
           const newData = { ...prev, earnedBadges: [...prev.earnedBadges, 'roasted'] };
           return { ...newData, earnedBadges: checkBadges(newData) };
         });
       }
-    } catch (e) { setRoastText('❌ API Error: ' + e.message); }
+    } catch (e) { setRoastText("Sarvam AI se connect nahi hua. Key check karo aur dobara try karo!"); }
     setRoastLoading(false);
   };
 
   const handleJugaad = async () => {
+    if (!SARVAM_KEY) {
+      setJugaadText("API key nahi hai toh jugaad bhi nahi hoga bhai 😅");
+      return;
+    }
     setJugaadLoading(true); setJugaadText('');
-    const prompt = `Give 4 desi money saving tips for a broke college student in Hinglish. Each tip max 1 line. Numbered 1-4. Funny but practical.\nThey have ₹${remaining} left for ${daysLeft} days.`;
+    const sysPrompt = "Tu ek jugaadu desi financial advisor hai jo broke college students ko paise bachane ke tips deta hai. Teri tips practical, funny, aur desi hoti hain.";
+    const userPrompt = `4 desi money saving tips de is student ke liye.\nHinglish mein. Har tip max 1 line. 1-2-3-4 numbered.\nFunny but practical.\nRemaining budget: Rs.${remaining}\nDays left in month: ${daysLeft}\nCollege: ${user.college}`;
     try {
-      let txt = '';
-      await streamClaude(prompt, chunk => { txt += chunk; setJugaadText(txt); });
-    } catch (e) { setJugaadText('❌ API Error: ' + e.message); }
+      await askSarvam(sysPrompt, userPrompt, chunk => { setJugaadText(chunk); });
+    } catch (e) { setJugaadText("Sarvam AI se connect nahi hua. Key check karo aur dobara try karo!"); }
     setJugaadLoading(false);
   };
 
   const handlePredict = async () => {
+    if (!SARVAM_KEY) {
+      setPredictText("Sarvam AI se connect nahi hua. Key check karo aur dobara try karo!");
+      return;
+    }
     setPredictLoading(true); setPredictText('');
-    const prompt = `Based on this student's spending pattern, predict when they will run out of budget. Give a 2-line prediction in Hinglish. Be specific with dates.\nBudget: ₹${budget}, Spent so far: ₹${spent}, Day of month: ${day}/30, Daily average: ₹${dailyAvg}`;
+    const sysPrompt = "Tu ek data-driven desi finance predictor hai. Tu student ka spending pattern dekh ke predict karta hai kab unka budget khatam hoga. Hinglish mein, specific dates ke saath.";
+    const userPrompt = `Is student ka spending pattern dekh ke 2 lines mein predict kar kab budget khatam hoga. Hinglish mein. Specific date bata.\nBudget: Rs.${budget}\nSpent so far: Rs.${spent}\nDay of month: ${day} out of 30\nDaily average spend: Rs.${dailyAvg}`;
     try {
-      let txt = '';
-      await streamClaude(prompt, chunk => { txt += chunk; setPredictText(txt); });
-    } catch (e) { setPredictText('❌ API Error: ' + e.message); }
+      await askSarvam(sysPrompt, userPrompt, chunk => { setPredictText(chunk); });
+    } catch (e) { setPredictText("Sarvam AI se connect nahi hua. Key check karo aur dobara try karo!"); }
     setPredictLoading(false);
   };
 
   const handleReport = async () => {
+    if (!SARVAM_KEY) {
+      setReportText("Sarvam AI se connect nahi hua. Key check karo aur dobara try karo!");
+      return;
+    }
     setReportLoading(true); setReportText('');
     const saved = Math.max(0, budget - spent);
     const clearedDues = borrows.filter(b => b.settled).length;
     const topCat = Object.entries(catMap).sort((a, b) => b[1] - a[1])[0];
-    const prompt = `Generate a funny student-style monthly finance report card in Hinglish. Give them a letter grade (A to F) and a funny title like 'Budget King' or 'Canteen ka Shareholder'. Then 3 bullet points of feedback. Keep it fun.\nBudget: ₹${budget}, Spent: ₹${spent}, Top spend: ${topCat ? getCatById(topCat[0]).label : 'N/A'}, Savings: ₹${saved}, Dues cleared: ${clearedDues}`;
+    const topCategoryLabel = topCat ? getCatById(topCat[0]).label : 'N/A';
+    
+    const sysPrompt = "Tu ek funny desi school teacher hai jo college students ko unke monthly finance ka report card deta hai. Tu grades deta hai aur funny feedback likhta hai Hinglish mein.";
+    const userPrompt = `Is student ko ek funny monthly finance report card de. Ek letter grade (A to F), ek funny title jaise 'Budget King' ya 'Canteen ka CEO', aur 3 bullet points feedback. Fun aur desi rakho.\nBudget: Rs.${budget}\nTotal spent: Rs.${spent}\nTop spending category: ${topCategoryLabel}\nAmount saved: Rs.${saved}\nDues cleared: ${clearedDues}`;
     try {
-      let txt = '';
-      await streamClaude(prompt, chunk => { txt += chunk; setReportText(txt); });
-    } catch (e) { setReportText('❌ API Error: ' + e.message); }
+      await askSarvam(sysPrompt, userPrompt, chunk => { setReportText(chunk); });
+    } catch (e) { setReportText("Sarvam AI se connect nahi hua. Key check karo aur dobara try karo!"); }
     setReportLoading(false);
   };
 
@@ -156,9 +185,9 @@ export default function AIFeatures({ data, setData }) {
       disabled={loading || disabled}
       style={{
         width: '100%', padding: '13px 16px', borderRadius: 10, cursor: 'pointer',
-        border: `1px solid ${color || T.neon}`,
-        background: `${color || T.neon}15`,
-        color: color || T.neon,
+        border: `1px solid ${color || T.primary}`,
+        background: `${color || T.primary}15`,
+        color: color || T.primary,
         fontFamily: "'Orbitron', monospace", fontWeight: 700, fontSize: 12,
         letterSpacing: 1, transition: 'opacity 0.2s',
         opacity: loading || disabled ? 0.6 : 1,
@@ -173,13 +202,24 @@ export default function AIFeatures({ data, setData }) {
   return (
     <div style={{ paddingBottom: 80 }}>
       <span style={{ ...css.orbitron, fontSize: 20, fontWeight: 900, color: T.text, display: 'block', marginBottom: 4 }}>🤖 AI FEATURES</span>
-      <div style={{ color: T.muted, ...css.rajdhani, fontSize: 13, marginBottom: 20 }}>Powered by Claude AI — Hinglish mein samjhega!</div>
+      <div style={{ color: '#FF9933', ...css.rajdhani, fontSize: 13, fontWeight: 700, marginBottom: 16 }}>Powered by Sarvam AI 🇮🇳</div>
+
+      <div style={{ marginBottom: 20, padding: 12, background: '#111', borderRadius: 10, border: '1px solid #333' }}>
+        <label style={{ display: 'block', ...css.orbitron, fontSize: 10, color: T.muted, marginBottom: 6, letterSpacing: 1 }}>SARVAM API KEY</label>
+        <input 
+          type="password" 
+          placeholder="sk_sarvam_xxxxxxxxx"
+          onChange={(e) => { SARVAM_KEY = e.target.value; }}
+          style={{ width: '100%', padding: '10px', borderRadius: 6, border: '1px solid #444', background: '#000', color: T.text, fontFamily: 'monospace', fontSize: 12 }}
+        />
+        <div style={{ color: T.muted, fontSize: 10, marginTop: 6, fontFamily: 'sans-serif' }}>Get free key at <a href="https://dashboard.sarvam.ai" target="_blank" rel="noreferrer" style={{color: '#FF9933', textDecoration: 'none'}}>dashboard.sarvam.ai</a></div>
+      </div>
 
       {/* FEATURE 1 — Desi Notification */}
       <div style={{ ...css.darkCard, marginBottom: 14 }}>
         <span style={css.sectionLabel}>DESI NOTIFICATION</span>
         <AIBtn onClick={handleDesiNotif} loading={notifLoading} label="🔔 Get Desi Notification" color={T.yellow} />
-        {notifText && tintCard(T.yellow, notifText, '📢 NOTIFICATION')}
+        {notifText && tintCard(T.yellow, notifText, '📢 NOTIFICATION', T, css)}
         {notifications?.length > 0 && (
           <div style={{ marginTop: 12 }}>
             <div style={{ color: T.muted, fontSize: 11, ...css.orbitron, letterSpacing: 1, marginBottom: 6 }}>HISTORY</div>
@@ -196,15 +236,15 @@ export default function AIFeatures({ data, setData }) {
       {/* FEATURE 2 — Roast */}
       <div style={{ ...css.darkCard, marginBottom: 14 }}>
         <span style={css.sectionLabel}>AI SPENDING ROAST</span>
-        <AIBtn onClick={handleRoast} loading={roastLoading} label="🔥 ROAST MY SPENDING" color={T.red} />
+        <AIBtn onClick={handleRoast} loading={roastLoading} label="🔥 ROAST MY SPENDING" color={T.danger} />
       </div>
 
       {/* FEATURE 3 — Jugaad */}
       {pct >= 70 && (
         <div style={{ ...css.darkCard, marginBottom: 14 }}>
           <span style={css.sectionLabel}>JUGAAD MODE</span>
-          <AIBtn onClick={handleJugaad} loading={jugaadLoading} label="🔧 Jugaad Mode Tips" color={T.neon} />
-          {jugaadText && tintCard(T.neon, jugaadText, '💡 TIPS')}
+          <AIBtn onClick={handleJugaad} loading={jugaadLoading} label="🔧 Jugaad Mode Tips" color={T.primary} />
+          {jugaadText && tintCard(T.primary, jugaadText, '💡 TIPS', T, css)}
         </div>
       )}
 
@@ -212,7 +252,7 @@ export default function AIFeatures({ data, setData }) {
       <div style={{ ...css.darkCard, marginBottom: 14 }}>
         <span style={css.sectionLabel}>EXPENSE PREDICTION</span>
         <AIBtn onClick={handlePredict} loading={predictLoading} label="🔮 Predict My Month" color={T.purple} />
-        {predictText && tintCard(T.purple, predictText, '🔮 PREDICTION')}
+        {predictText && tintCard(T.purple, predictText, '🔮 PREDICTION', T, css)}
       </div>
 
       {/* FEATURE 5 — Report Card */}
@@ -239,20 +279,20 @@ export default function AIFeatures({ data, setData }) {
           animation: 'fadeIn 0.3s',
         }}>
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 0' }}>
-            <div style={{ ...css.orbitron, fontSize: 20, fontWeight: 900, color: T.red, marginBottom: 16, textShadow: `0 0 20px ${T.red}` }}>
+            <div style={{ ...css.orbitron, fontSize: 20, fontWeight: 900, color: T.danger, marginBottom: 16, textShadow: `0 0 20px ${T.danger}` }}>
               🔥 YOUR SPENDING ROAST
             </div>
             {roastLoading && <div style={{ color: T.muted, ...css.rajdhani, fontSize: 14 }}>⏳ AI soch raha hai...</div>}
             <div style={{
               color: T.text, ...css.rajdhani, fontSize: 15, lineHeight: 1.8,
               whiteSpace: 'pre-wrap', background: '#200005', borderRadius: 12,
-              padding: 16, border: `1px solid ${T.red}44`,
+              padding: 16, border: `1px solid ${T.danger}44`,
             }}>{roastText}</div>
           </div>
           <div style={{ padding: 20 }}>
             <button
               onClick={() => setRoastModal(false)}
-              style={{ ...css.neonBtn, width: '100%', background: T.red, fontSize: 14, padding: 14 }}
+              style={{ ...css.neonBtn, width: '100%', background: T.danger, fontSize: 14, padding: 14 }}
             >OUCH, GOT IT 😅</button>
           </div>
         </div>

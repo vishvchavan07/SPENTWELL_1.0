@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { FOOD_BUBBLES, T, css } from './theme';
+import { FOOD_BUBBLES, useTheme } from './theme';
 
 const MIN_R = 36, MAX_R = 95;
 
@@ -37,6 +37,7 @@ function updateRadii(bubbles, amounts) {
 }
 
 export default function BubbleMap({ data, setData }) {
+  const { T, css } = useTheme();
   const canvasRef = useRef(null);
   const bubblesRef = useRef(null);
   const animRef = useRef(null);
@@ -266,14 +267,14 @@ export default function BubbleMap({ data, setData }) {
         borderBottom: '1px solid #1e1e1e',
       }}>
         <div>
-          <div style={{ ...css.orbitron, fontSize: 13, fontWeight: 900, color: antigravity ? T.cyan : T.neon }}>
+          <div style={{ ...css.orbitron, fontSize: 13, fontWeight: 900, color: antigravity ? T.cyan : T.primary }}>
             FOOD BUBBLE MAP {antigravity ? '🛸' : ''}
           </div>
           <div style={{ color: T.muted, fontSize: 10, ...css.rajdhani }}>Bigger bubble = more kharcha</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ color: T.muted, fontSize: 9, ...css.orbitron, letterSpacing: 1 }}>TOTAL FOOD</div>
-          <div style={{ color: T.neon, ...css.orbitron, fontSize: 14, fontWeight: 900 }}>₹{totalFood.toLocaleString()}</div>
+          <div style={{ color: T.primary, ...css.orbitron, fontSize: 14, fontWeight: 900 }}>₹{totalFood.toLocaleString()}</div>
         </div>
       </div>
 
@@ -304,12 +305,12 @@ export default function BubbleMap({ data, setData }) {
           <div style={{ color: selBubble.color, ...css.orbitron, fontSize: 18, fontWeight: 900 }}>₹{selAmount}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <button onClick={() => adjustAmount(50)} style={{
-              background: T.neonDim, border: `1px solid ${T.neon}`, borderRadius: 6,
-              color: T.neon, width: 36, height: 28, cursor: 'pointer', fontSize: 14, fontWeight: 700,
+              background: T.primaryDim, border: `1px solid ${T.primary}`, borderRadius: 6,
+              color: T.primary, width: 36, height: 28, cursor: 'pointer', fontSize: 14, fontWeight: 700,
             }}>+</button>
             <button onClick={() => adjustAmount(-50)} style={{
-              background: '#2a0010', border: `1px solid ${T.red}`, borderRadius: 6,
-              color: T.red, width: 36, height: 28, cursor: 'pointer', fontSize: 14, fontWeight: 700,
+              background: '#2a0010', border: `1px solid ${T.danger}`, borderRadius: 6,
+              color: T.danger, width: 36, height: 28, cursor: 'pointer', fontSize: 14, fontWeight: 700,
             }}>−</button>
           </div>
         </div>
@@ -324,15 +325,15 @@ export default function BubbleMap({ data, setData }) {
       }}>
         <button onClick={handleAntigravity} style={{
           ...css.ghostBtn, flex: 2, fontSize: 11, padding: '10px 8px',
-          borderColor: antigravity ? T.purple : T.neon,
-          color: antigravity ? T.purple : T.neon,
+          borderColor: antigravity ? T.purple : T.primary,
+          color: antigravity ? T.purple : T.primary,
           background: antigravity ? '#1a0033' : 'transparent',
         }}>
           {antigravity ? '🌍 NORMAL' : '🛸 ANTIGRAVITY'}
         </button>
         <button onClick={shake} style={{
           ...css.ghostBtn, flex: 1, fontSize: 11, padding: '10px 4px',
-          borderColor: T.red, color: T.red,
+          borderColor: T.danger, color: T.danger,
         }}>💥 SHAKE</button>
         <button onClick={randomise} style={{ ...css.ghostBtn, flex: 1, fontSize: 11, padding: '10px 4px' }}>
           🎲 RND

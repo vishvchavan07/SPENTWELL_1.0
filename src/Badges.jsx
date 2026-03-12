@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { css, T, WEEKLY_CHALLENGES, totalSpentThisMonth, checkBadges, uid } from './theme';
+import { WEEKLY_CHALLENGES, totalSpentThisMonth, checkBadges, uid, useTheme } from './theme';
 
 const BADGE_DEFS = [
   { id: 'first_log',   emoji: '🌱', name: 'First Step',     desc: 'Log your first expense' },
@@ -20,6 +20,7 @@ function ProgressBar({ value, max, color }) {
 }
 
 function GoalModal({ onClose, onAdd }) {
+  const { T, css } = useTheme();
   const emojis = ['🎯', '💻', '✈️', '🏠', '🎸', '📱', '🎓', '🚗', '💍', '🌴'];
   const [emoji, setEmoji] = useState('🎯');
   const [name, setName] = useState('');
@@ -34,8 +35,8 @@ function GoalModal({ onClose, onAdd }) {
           {emojis.map(em => (
             <button key={em} onClick={() => setEmoji(em)} style={{
               width: 40, height: 40, fontSize: 22, cursor: 'pointer', borderRadius: 8,
-              background: emoji === em ? T.neonDim : '#1a1a1a',
-              border: `1.5px solid ${emoji === em ? T.neon : '#2a2a2a'}`,
+              background: emoji === em ? T.primaryDim : '#1a1a1a',
+              border: `1.5px solid ${emoji === em ? T.primary : '#2a2a2a'}`,
             }}>{em}</button>
           ))}
         </div>
@@ -57,11 +58,12 @@ function GoalModal({ onClose, onAdd }) {
 }
 
 export default function Badges({ data, setData }) {
+  const { T, css } = useTheme();
   const [showGoalModal, setShowGoalModal] = useState(false);
   const { user, expenses, borrows, streak, earnedBadges, savingsGoals } = data;
   const spent = totalSpentThisMonth(expenses);
   const pct = Math.min(100, Math.round((spent / user.budget) * 100));
-  const pctColor = pct < 60 ? T.neon : pct < 85 ? T.yellow : T.red;
+  const pctColor = pct < 60 ? T.primary : pct < 85 ? T.yellow : T.danger;
   const settledCount = borrows.filter(b => b.settled).length;
 
   const motivations = [
@@ -130,8 +132,8 @@ export default function Badges({ data, setData }) {
             const earned = earnedBadges.includes(b.id);
             return (
               <div key={b.id} style={{
-                background: earned ? T.neonDim : '#1a1a1a',
-                border: `1.5px solid ${earned ? T.neon : '#2a2a2a'}`,
+                background: earned ? T.primaryDim : '#1a1a1a',
+                border: `1.5px solid ${earned ? T.primary : '#2a2a2a'}`,
                 borderRadius: 12, padding: 12, textAlign: 'center',
                 opacity: earned ? 1 : 0.35,
                 position: 'relative',
@@ -140,13 +142,13 @@ export default function Badges({ data, setData }) {
                 {earned && (
                   <div style={{
                     position: 'absolute', top: 6, right: 6, width: 10, height: 10,
-                    borderRadius: '50%', background: T.neon, boxShadow: `0 0 6px ${T.neon}`,
+                    borderRadius: '50%', background: T.primary, boxShadow: `0 0 6px ${T.primary}`,
                   }} />
                 )}
                 <div style={{ fontSize: 28, marginBottom: 4 }}>{b.emoji}</div>
-                <div style={{ ...css.orbitron, fontSize: 10, color: earned ? T.neon : T.muted, fontWeight: 700 }}>{b.name}</div>
+                <div style={{ ...css.orbitron, fontSize: 10, color: earned ? T.primary : T.muted, fontWeight: 700 }}>{b.name}</div>
                 <div style={{ color: T.muted, fontSize: 11, ...css.rajdhani, marginTop: 2 }}>{b.desc}</div>
-                {earned && <div style={{ color: T.neon, fontSize: 10, ...css.orbitron, marginTop: 4 }}>EARNED ✓</div>}
+                {earned && <div style={{ color: T.primary, fontSize: 10, ...css.orbitron, marginTop: 4 }}>EARNED ✓</div>}
               </div>
             );
           })}
@@ -171,14 +173,14 @@ export default function Badges({ data, setData }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 20 }}>{g.emoji}</span>
                   <span style={{ ...css.rajdhani, fontWeight: 700, color: T.text, fontSize: 14, flex: 1, marginLeft: 8 }}>{g.name}</span>
-                  <span style={{ color: T.neon, ...css.orbitron, fontSize: 12 }}>{gPct}%</span>
+                  <span style={{ color: T.primary, ...css.orbitron, fontSize: 12 }}>{gPct}%</span>
                   <button onClick={() => deleteGoal(g.id)} style={{ background: 'none', border: 'none', color: T.muted, cursor: 'pointer', fontSize: 14, marginLeft: 6 }}>✕</button>
                 </div>
-                <ProgressBar value={g.saved} max={g.target} color={T.neon} />
+                <ProgressBar value={g.saved} max={g.target} color={T.primary} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
                   <span style={{ color: T.mid, fontSize: 12, ...css.rajdhani }}>₹{g.saved.toLocaleString()} / ₹{g.target.toLocaleString()}</span>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => updateGoalSaved(g.id, -100)} style={{ ...css.ghostBtn, fontSize: 11, padding: '4px 10px', borderColor: T.red, color: T.red }}>-₹100</button>
+                    <button onClick={() => updateGoalSaved(g.id, -100)} style={{ ...css.ghostBtn, fontSize: 11, padding: '4px 10px', borderColor: T.danger, color: T.danger }}>-₹100</button>
                     <button onClick={() => updateGoalSaved(g.id, 100)} style={{ ...css.ghostBtn, fontSize: 11, padding: '4px 10px' }}>+₹100</button>
                   </div>
                 </div>
