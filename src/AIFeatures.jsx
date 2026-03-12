@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { totalSpentThisMonth, daysLeftInMonth, getCatById, uid, checkBadges, useTheme } from './theme';
 
-let SARVAM_KEY = "";
+let SARVAM_KEY = "sk_sfmmipm1_GeVZQq4KZBEfNtSibg4VNfhm";
 
 async function askSarvam(systemPrompt, userPrompt, onChunk) {
   const res = await fetch("https://api.sarvam.ai/v1/chat/completions", {
