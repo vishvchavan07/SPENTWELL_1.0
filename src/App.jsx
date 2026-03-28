@@ -1,212 +1,49 @@
-import { useState, useEffect, useCallback } from 'react';
-import { STORAGE_KEY, DEFAULT_DATA, THEMES, ThemeContext, getCss } from './theme';
-import Onboarding from './Onboarding';
-import Dashboard from './Dashboard';
-import Expenses from './Expenses';
-import Dues from './Dues';
-import BubbleMap from './BubbleMap';
-import Badges from './Badges';
-import AIFeatures from './AIFeatures';
-
-function loadData() {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...DEFAULT_DATA, ...JSON.parse(raw) };
-  } catch { /* ignore */ }
-  return { ...DEFAULT_DATA };
-}
-
-function saveData(d) {
-  try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch { /* ignore */ }
-}
-
-const TABS = [
-  { id: 'home',    label: 'Home',   icon: '📊' },
-  { id: 'spend',   label: 'Spend',  icon: '💸' },
-  { id: 'dues',    label: 'Dues',   icon: '🤝' },
-  { id: 'map',     label: 'Map',    icon: '🫧' },
-  { id: 'xp',      label: 'XP',     icon: '🏆' },
-  { id: 'ai',      label: 'AI',     icon: '🤖' },
-];
+import { useState, useEffect } from "react";
+import Auth from "./Auth";
+import SpentWell from "./SpentWell";
+import ParentApproval from "./ParentApproval";
 
 export default function App() {
-  const [data, setDataRaw] = useState(loadData);
-  const [tab, setTab] = useState('home');
-  const [themeMode, setThemeMode] = useState(() => {
-    try {
-      return window.localStorage.getItem('spentwell_theme') || 'dark';
-    } catch { return 'dark'; }
-  });
+  const [user, setUser]           = useState(null);
+  const [reviewData, setReviewData] = useState(null);
 
-  const T = THEMES[themeMode] || THEMES.dark;
-  const css = getCss(T);
-
-  const toggleTheme = () => {
-    const next = themeMode === 'dark' ? 'light' : 'dark';
-    setThemeMode(next);
-    try { window.localStorage.setItem('spentwell_theme', next); } catch { /* ignore */ }
-  };
-
-  const setData = useCallback((updater) => {
-    setDataRaw(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      saveData(next);
-      return next;
-    });
+  // ── Check URL for parent approval review link ──────────
+  useEffect(() => {
+    const params   = new URLSearchParams(window.location.search);
+    const swReview = params.get("sw_review");
+    if (swReview) {
+      try { setReviewData(JSON.parse(atob(swReview))); }
+      catch { /* bad param, ignore */ }
+    }
   }, []);
 
-  useEffect(() => { saveData(data); }, [data]);
+  // ── Auto-login from localStorage session ───────────────
+  useEffect(() => {
+    if (reviewData) return;
+    try {
+      const session = localStorage.getItem("sw_session");
+      if (session) {
+        const userId = JSON.parse(session);
+        const users  = JSON.parse(localStorage.getItem("sw_users") || "{}");
+        if (users[userId]) setUser({ ...users[userId], userId });
+      }
+    } catch { /* ignore */ }
+  }, [reviewData]);
 
-  const handleOnboardComplete = (user) => {
-    setData(prev => ({ ...prev, user, onboarded: true }));
+  const handleLogin = (userData) => {
+    setUser(userData);
+    localStorage.setItem("sw_session", JSON.stringify(userData.userId));
   };
 
-  if (!data.onboarded) {
-    return <Onboarding onComplete={handleOnboardComplete} />;
-  }
-
-  // Overdue count for badge on Dues tab
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const overdueCnt = data.borrows.filter(b => !b.settled && b.dueDate && b.dueDate < todayStr).length;
-
-  const appStyle = {
-    background: T.bg,
-    minHeight: '100dvh',
-    color: T.text,
-    fontFamily: "'Rajdhani', sans-serif",
-    maxWidth: 480,
-    margin: '0 auto',
-    position: 'relative',
+  const handleLogout = () => {
+    localStorage.removeItem("sw_session");
+    setUser(null);
   };
 
-  const contentStyle = {
-    padding: tab === 'map' ? 0 : '0 16px',
-    paddingTop: tab === 'map' ? 0 : 56,
-  };
+  // Parent approval page — no login needed
+  if (reviewData) return <ParentApproval data={reviewData} />;
 
-  return (
-    <ThemeContext.Provider value={T}>
-      <div style={appStyle}>
-      {/* Top Bar — hidden on Map */}
-      {tab !== 'map' && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '100%',
-          maxWidth: 480,
-          zIndex: 40,
-          background: T.name === 'dark' ? '#0a0a0aee' : '#ffffffee',
-          backdropFilter: 'blur(12px)',
-          borderBottom: `1px solid ${T.border}`,
-          padding: '10px 16px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
-          <div style={{ ...css.orbitron, fontSize: 15, fontWeight: 900, color: T.primary, textShadow: T.name === 'dark' ? `0 0 10px ${T.primary}66` : 'none', letterSpacing: 2 }}>
-            SPENTWELL
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 16 }}>🔥</span>
-              <span style={{ ...css.orbitron, fontSize: 14, fontWeight: 700, color: T.yellow }}>{data.streak}</span>
-            </div>
-            <button
-              onClick={toggleTheme}
-              style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', padding: 0 }}
-            >
-              {themeMode === 'light' ? '🌙' : '☀️'}
-            </button>
-          </div>
-        </div>
-      )}
+  if (!user) return <Auth onLogin={handleLogin} />;
 
-      {/* Main Content */}
-      <div style={contentStyle}>
-        {tab === 'home'  && <Dashboard data={data} onNavigateDues={() => setTab('dues')} />}
-        {tab === 'spend' && <Expenses data={data} setData={setData} />}
-        {tab === 'dues'  && <Dues data={data} setData={setData} />}
-        {tab === 'map'   && <BubbleMap data={data} setData={setData} />}
-        {tab === 'xp'    && <Badges data={data} setData={setData} />}
-        {tab === 'ai'    && <AIFeatures data={data} setData={setData} />}
-      </div>
-
-      {/* Bottom Nav */}
-      <nav style={{
-        position: 'fixed',
-        bottom: 0,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '100%',
-        maxWidth: 480,
-        zIndex: 50,
-        background: T.name === 'dark' ? '#0f0f0fee' : '#ffffffee',
-        backdropFilter: 'blur(16px)',
-        borderTop: `1px solid ${T.border}`,
-        display: 'flex',
-        padding: '4px 0 8px',
-      }}>
-        {TABS.map(t => {
-          const active = tab === t.id;
-          const hasBadge = t.id === 'dues' && overdueCnt > 0;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              style={{
-                flex: 1,
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '6px 2px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 2,
-                position: 'relative',
-              }}
-            >
-              {/* Neon underline for active */}
-              {active && (
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: '20%',
-                  right: '20%',
-                  height: 2,
-                  background: T.primary,
-                  borderRadius: 2,
-                  boxShadow: T.name === 'dark' ? `0 0 8px ${T.primary}` : 'none',
-                }} />
-              )}
-              {/* Red dot badge */}
-              {hasBadge && (
-                <div style={{
-                  position: 'absolute',
-                  top: 4,
-                  right: '22%',
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: T.danger,
-                  boxShadow: T.name === 'dark' ? `0 0 6px ${T.danger}` : 'none',
-                }} />
-              )}
-              <span style={{ fontSize: 20 }}>{t.icon}</span>
-              <span style={{
-                fontSize: 9,
-                ...css.orbitron,
-                color: active ? T.primary : T.muted,
-                letterSpacing: 0.5,
-                transition: 'color 0.2s',
-              }}>{t.label}</span>
-            </button>
-          );
-        })}
-      </nav>
-      </div>
-    </ThemeContext.Provider>
-  );
+  return <SpentWell user={user} onLogout={handleLogout} />;
 }
